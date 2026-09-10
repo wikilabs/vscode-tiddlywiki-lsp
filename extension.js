@@ -34,7 +34,9 @@ function buildClient() {
 			// than competing for the .tid file type.
 			documentSelector: [
 				{ scheme: "file", language: "tid" },
-				{ scheme: "file", language: "tiddlywiki5" }
+				{ scheme: "file", language: "tiddlywiki5" },
+				// The server's read-only views; a view of JavaScript is left alone.
+				{ scheme: "tiddlywiki", language: "tid" }
 			],
 			outputChannelName: "TiddlyWiki LSP"
 		}
@@ -65,8 +67,22 @@ function stop() {
 	return running.stop();
 }
 
+// A shadow, a module or a tiddler packed into a .json file has no file to open,
+// so the editor shows the wiki's own text of it, read-only, under this scheme.
+const views = {
+	provideTextDocumentContent: function(uri) {
+		if(!client) {
+			return "TiddlyWiki LSP is not connected, so this tiddler cannot be shown.";
+		}
+		return client.sendRequest("tiddlywiki/tiddler", { uri: uri.toString() }).then(function(result) {
+			return result.text;
+		});
+	}
+};
+
 function activate(context) {
 	context.subscriptions.push(
+		vscode.workspace.registerTextDocumentContentProvider("tiddlywiki", views),
 		vscode.commands.registerCommand("tiddlywikiLsp.reconnect", function() {
 			return stop().then(start);
 		}),
