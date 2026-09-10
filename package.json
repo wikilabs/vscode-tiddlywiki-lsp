@@ -1,0 +1,78 @@
+{
+	"name": "tiddlywiki-lsp",
+	"displayName": "TiddlyWiki LSP",
+	"description": "Tiddler title completion, broken-link warnings, hover and go-to-definition, served by a running TiddlyWiki --lsp server.",
+	"version": "0.1.0",
+	"publisher": "wikilabs",
+	"license": "BSD-3-Clause",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wikilabs/vscode-tiddlywiki-lsp.git"
+	},
+	"private": true,
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"categories": [
+		"Programming Languages",
+		"Linters"
+	],
+	"main": "./extension.js",
+	"activationEvents": [
+		"onLanguage:tid",
+		"onLanguage:tiddlywiki5"
+	],
+	"contributes": {
+		"languages": [
+			{
+				"id": "tid",
+				"aliases": [
+					"Tiddler",
+					"Tid",
+					"tid"
+				],
+				"extensions": [
+					".tid",
+					".meta"
+				]
+			},
+			{
+				"id": "tiddlywiki5",
+				"aliases": [
+					"Tiddlywiki5",
+					"tiddlywiki5",
+					"tw5"
+				],
+				"extensions": [
+					".tw",
+					".tw5",
+					".tiddlywiki5"
+				]
+			}
+		],
+		"configuration": {
+			"title": "TiddlyWiki LSP",
+			"properties": {
+				"tiddlywikiLsp.host": {
+					"type": "string",
+					"default": "127.0.0.1",
+					"description": "Host the TiddlyWiki --lsp server listens on."
+				},
+				"tiddlywikiLsp.port": {
+					"type": "number",
+					"default": 6009,
+					"description": "Port given to --lsp port=<n> when the wiki was started."
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "tiddlywikiLsp.reconnect",
+				"title": "TiddlyWiki LSP: Reconnect to the wiki"
+			}
+		]
+	},
+	"dependencies": {
+		"vscode-languageclient": "^10.1.1"
+	}
+}
