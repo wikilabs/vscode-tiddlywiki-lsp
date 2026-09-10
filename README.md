@@ -1,9 +1,13 @@
 # TiddlyWiki LSP (VS Code)
 
 Connects VS Code to a running TiddlyWiki `--lsp` server, so `.tid` files get
-tiddler title completion, warnings on links that point at nothing, a hover that
-explains the filter, macro call or widget under the cursor, and ctrl-click to
-the `.tid` file behind a link.
+completion of titles and names, warnings on links that point at nothing, hovers
+on filters, operators, calls, widgets and pragma lines, go to definition, find
+references, the outline, Ctrl+T, highlighting, folding, signature help, inlay
+hints and rename.
+
+Shadow tiddlers and tiddlers without a file of their own open read-only under
+the `tiddlywiki:` scheme. Saving a `.tid` updates the running wiki.
 
 The extension is a thin client: every feature comes from the server.
 
@@ -49,6 +53,9 @@ Then either:
 
 - open this folder in VS Code and press <kbd>F5</kbd> for an Extension Development Host, or
 - copy the folder (including `node_modules`) into `%USERPROFILE%\.vscode\extensions\` and reload the window.
+
+After updating an installed copy, reload the window too, so the `tiddlywiki:`
+scheme is registered again.
 
 ## Settings
 

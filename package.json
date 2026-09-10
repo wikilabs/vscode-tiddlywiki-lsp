@@ -1,7 +1,7 @@
 {
 	"name": "tiddlywiki-lsp",
 	"displayName": "TiddlyWiki LSP",
-	"description": "Tiddler title completion, broken-link warnings, hover and go-to-definition, served by a running TiddlyWiki --lsp server.",
+	"description": "Completion, hover, go to definition, references, outline, folding, signature help, inlay hints and rename for .tid files, served by a running TiddlyWiki --lsp server.",
 	"version": "0.1.0",
 	"publisher": "wikilabs",
 	"license": "BSD-3-Clause",
