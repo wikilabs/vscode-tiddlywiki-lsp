@@ -61,7 +61,7 @@
 				"tiddlywikiLsp.port": {
 					"type": "number",
 					"default": 6009,
-					"description": "Port given to --lsp port=<n> when the wiki was started."
+					"description": "Port of the wiki's --lsp server. Leave unset to read it from the .tw-mcp/lsp file the running wiki writes in its folder."
 				}
 			}
 		},
