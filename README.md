@@ -91,6 +91,16 @@ panel beside the editor, on that tiddler, taken from the file's `title` field.
 Previewing another tiddler reuses the panel without reloading the wiki. It shows
 the saved text, and a save shows up there without a refresh.
 
+## Check all tiddlers
+
+`TiddlyWiki LSP: Check all tiddlers` in the command palette checks every `.tid`
+file of the wiki and opens the Problems panel with the calls whose name nothing
+in the wiki defines, as information, each with its quick fix. Links to missing
+tiddlers are not listed: a wiki links to tiddlers it has yet to write, so they
+are warned about only in an open file. After a check the entries stay in the
+list while you open and close their files, so an undefined name shows a blue
+squiggle instead of the grey dots until the window reloads.
+
 ## Language ids
 
 Binds to `tid` (`.tid`, `.meta`) and `tiddlywiki5` (`.tw`, `.tw5`), the ids the

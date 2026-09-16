@@ -410,6 +410,25 @@ function titleOf(text) {
 	return null;
 }
 
+// Puts the undefined names of the wiki's .tid files into the Problems panel,
+// as information, since the panel leaves hints out.
+async function checkAll() {
+	if(!client || !client.isRunning()) {
+		vscode.window.showWarningMessage("TiddlyWiki LSP is not running, so there is no wiki to check.");
+		return;
+	}
+	const summary = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Checking all tiddlers" }, function() {
+		return client.sendRequest("tiddlywiki/checkAll");
+	}).then(null, function(err) {
+		vscode.window.showErrorMessage("Checking all tiddlers failed: " + err.message);
+		return null;
+	});
+	if(summary) {
+		vscode.commands.executeCommand("workbench.actions.view.problems");
+		vscode.window.showInformationMessage("Checked " + summary.files + " tiddler files: " + summary.undefinedNames + " undefined names.");
+	}
+}
+
 // Opens the tiddler of a .tid file in the running wiki, beside the editor.
 async function previewInWiki(uri) {
 	const target = uri || (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri);
@@ -522,6 +541,7 @@ function activate(context) {
 			output.show(true);
 		}),
 		vscode.commands.registerCommand("tiddlywiki.lsp.preview", previewInWiki),
+		vscode.commands.registerCommand("tiddlywiki.lsp.checkAll", checkAll),
 		vscode.workspace.registerTextDocumentContentProvider("tiddlywiki", views),
 		vscode.commands.registerCommand("tiddlywiki.lsp.reconnect", function() {
 			return stop().then(start);

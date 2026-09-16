@@ -101,6 +101,10 @@
 			{
 				"command": "tiddlywiki.lsp.preview",
 				"title": "TiddlyWiki LSP: Preview in TiddlyWiki"
+			},
+			{
+				"command": "tiddlywiki.lsp.checkAll",
+				"title": "TiddlyWiki LSP: Check all tiddlers"
 			}
 		],
 		"menus": {
