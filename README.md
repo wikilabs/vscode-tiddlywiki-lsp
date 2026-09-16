@@ -102,6 +102,14 @@ Once listed, the entries stay while you open and close their files, so an
 undefined name shows a blue squiggle instead of the grey dots until the window
 reloads.
 
+## Link underline
+
+tw5-syntax underlines link text with a solid line, which no theme can make
+lighter. The extension replaces it with a fine dotted line, and a link to a
+tiddler the wiki does not have keeps only its warning squiggle. It covers what
+tw5-syntax underlines: `[[links]]`, `[ext[...]]`, external URLs, `$:/` system
+links and CamelCase links in the body, not in code, comments or tags.
+
 ## Language ids
 
 Binds to `tid` (`.tid`, `.meta`) and `tiddlywiki5` (`.tw`, `.tw5`), the ids the

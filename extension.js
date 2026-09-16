@@ -7,6 +7,7 @@ const net = require("net");
 const path = require("path");
 const vscode = require("vscode");
 const { LanguageClient, State, createClientPipeTransport, generateRandomPipeName } = require("vscode-languageclient/node");
+const linkUnderline = require("./link-underline");
 
 // Written by the wiki's --lsp in its folder, naming the port it listens on.
 const DISCOVERY = path.join(".tw-mcp", "lsp");
@@ -559,6 +560,7 @@ function activate(context) {
 		}),
 		{ dispose: function() { deactivated = true; clearTimeout(reconnectTimer); stop(); } }
 	);
+	linkUnderline.activate(context);
 	start();
 }
 
