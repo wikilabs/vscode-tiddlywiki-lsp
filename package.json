@@ -1,7 +1,7 @@
 {
 	"name": "tiddlywiki-lsp",
 	"displayName": "TiddlyWiki LSP",
-	"description": "Completion, hover, go to definition, references, outline, folding, signature help, inlay hints and rename for .tid files, served by a running TiddlyWiki --lsp server.",
+	"description": "Completion, hover, go to definition, references, outline, folding, signature help, inlay hints and rename for .tid files, served by a TiddlyWiki --lsp process the editor starts for the wiki.",
 	"version": "0.1.0",
 	"publisher": "wikilabs",
 	"license": "BSD-3-Clause",
@@ -20,8 +20,15 @@
 	"main": "./extension.js",
 	"activationEvents": [
 		"onLanguage:tid",
-		"onLanguage:tiddlywiki5"
+		"onLanguage:tiddlywiki5",
+		"workspaceContains:tiddlywiki.info"
 	],
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": "limited",
+			"description": "In an untrusted workspace the command in tiddlywiki.info is not run; the extension only connects to a wiki already started with --lsp."
+		}
+	},
 	"contributes": {
 		"languages": [
 			{
