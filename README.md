@@ -122,8 +122,15 @@ Then either:
 - copy the folder (including `node_modules`) into `%USERPROFILE%\.vscode\extensions\` and reload the window.
 
 After updating an installed copy, reload the window. When `package.json`
-changed, restart VS Code instead: a reload keeps the old settings and
-activation events.
+changed, first run
+
+```
+node scripts/clear-extension-cache.js
+```
+
+VS Code caches the manifests of installed extensions and refreshes that cache
+only for its own installs, so the next window would start with the old
+commands, settings and activation events, then ask for another reload.
 
 ## Settings
 
