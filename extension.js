@@ -412,20 +412,20 @@ function titleOf(text) {
 
 // Puts the undefined names of the wiki's .tid files into the Problems panel,
 // as information, since the panel leaves hints out.
-async function checkAll() {
+async function listUndefinedCalls() {
 	if(!client || !client.isRunning()) {
 		vscode.window.showWarningMessage("TiddlyWiki LSP is not running, so there is no wiki to check.");
 		return;
 	}
-	const summary = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Checking all tiddlers" }, function() {
-		return client.sendRequest("tiddlywiki/checkAll");
+	const summary = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Listing undefined calls and widgets" }, function() {
+		return client.sendRequest("tiddlywiki/undefinedCalls");
 	}).then(null, function(err) {
-		vscode.window.showErrorMessage("Checking all tiddlers failed: " + err.message);
+		vscode.window.showErrorMessage("Listing undefined calls and widgets failed: " + err.message);
 		return null;
 	});
 	if(summary) {
 		vscode.commands.executeCommand("workbench.actions.view.problems");
-		vscode.window.showInformationMessage("Checked " + summary.files + " tiddler files: " + summary.undefinedNames + " undefined names.");
+		vscode.window.showInformationMessage("Found " + summary.undefinedCalls + " undefined calls and widgets in " + summary.files + " tiddler files.");
 	}
 }
 
@@ -541,7 +541,7 @@ function activate(context) {
 			output.show(true);
 		}),
 		vscode.commands.registerCommand("tiddlywiki.lsp.preview", previewInWiki),
-		vscode.commands.registerCommand("tiddlywiki.lsp.checkAll", checkAll),
+		vscode.commands.registerCommand("tiddlywiki.lsp.listUndefinedCalls", listUndefinedCalls),
 		vscode.workspace.registerTextDocumentContentProvider("tiddlywiki", views),
 		vscode.commands.registerCommand("tiddlywiki.lsp.reconnect", function() {
 			return stop().then(start);

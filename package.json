@@ -103,8 +103,8 @@
 				"title": "TiddlyWiki LSP: Preview in TiddlyWiki"
 			},
 			{
-				"command": "tiddlywiki.lsp.checkAll",
-				"title": "TiddlyWiki LSP: Check all tiddlers"
+				"command": "tiddlywiki.lsp.listUndefinedCalls",
+				"title": "TiddlyWiki LSP: List undefined calls and widgets"
 			}
 		],
 		"menus": {

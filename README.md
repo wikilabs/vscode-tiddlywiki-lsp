@@ -16,7 +16,7 @@ actually has.
 ## Requirements
 
 The wiki needs the `wikilabs/tw-mcp` and `wikilabs/tw-mcp-core` plugins,
-**tw-mcp 0.17.0 or later**. 0.17.0 is not released yet.
+**tw-mcp 0.18.0 or later**. 0.18.0 is not released yet.
 
 ## Which wiki
 
@@ -91,15 +91,16 @@ panel beside the editor, on that tiddler, taken from the file's `title` field.
 Previewing another tiddler reuses the panel without reloading the wiki. It shows
 the saved text, and a save shows up there without a refresh.
 
-## Check all tiddlers
+## List undefined calls and widgets
 
-`TiddlyWiki LSP: Check all tiddlers` in the command palette checks every `.tid`
-file of the wiki and opens the Problems panel with the calls whose name nothing
-in the wiki defines, as information, each with its quick fix. Links to missing
-tiddlers are not listed: a wiki links to tiddlers it has yet to write, so they
-are warned about only in an open file. After a check the entries stay in the
-list while you open and close their files, so an undefined name shows a blue
-squiggle instead of the grey dots until the window reloads.
+`TiddlyWiki LSP: List undefined calls and widgets` in the command palette reads
+every `.tid` file of the wiki and opens the Problems panel with the calls and
+widget tags whose name nothing in the wiki defines, as information, each with
+its quick fix. Links to missing tiddlers are not listed: a wiki links to
+tiddlers it has yet to write, so they are warned about only in an open file.
+Once listed, the entries stay while you open and close their files, so an
+undefined name shows a blue squiggle instead of the grey dots until the window
+reloads.
 
 ## Language ids
 
