@@ -28,6 +28,8 @@ let statusItem = null;
 let mcpServer = null;
 let previewPanel = null;
 let previewPort = null;
+// Set when the window closes or reloads, before the log channel is disposed.
+let deactivated = false;
 
 const STATUS_ICONS = { none: "$(circle-slash)", starting: "$(sync~spin)", running: "$(book)", stopped: "$(warning)" };
 const STATUS_WORDS = { none: "no wiki", starting: "starting", running: "running", stopped: "not running" };
@@ -51,6 +53,13 @@ function quoteArg(arg) {
 	return process.platform === "win32" ? '"' + arg + '"' : "'" + arg.replace(/'/g, "'\\''") + "'";
 }
 
+// The wiki process can still print or end after a reload has closed the log.
+function logFromChild(level, message) {
+	if(!deactivated) {
+		output[level](message);
+	}
+}
+
 // Each line the wiki prints becomes one log entry, without TiddlyWiki's terminal colours.
 function logLines(stream) {
 	let pending = "";
@@ -58,12 +67,12 @@ function logLines(stream) {
 		const lines = (pending + chunk.toString()).split(/\r?\n/);
 		pending = lines.pop();
 		lines.forEach(function(line) {
-			output.info(line.replace(/\x1b\[[0-9;]*m/g, ""));
+			logFromChild("info", line.replace(/\x1b\[[0-9;]*m/g, ""));
 		});
 	});
 	stream.on("end", function() {
 		if(pending) {
-			output.info(pending.replace(/\x1b\[[0-9;]*m/g, ""));
+			logFromChild("info", pending.replace(/\x1b\[[0-9;]*m/g, ""));
 		}
 	});
 }
@@ -82,13 +91,13 @@ function launch(wiki) {
 		let connected = false;
 		const failed = new Promise(function(resolve, reject) {
 			child.once("error", function(err) {
-				output.error("The wiki process failed: " + err.message);
+				logFromChild("error", "The wiki process failed: " + err.message);
 				if(!connected) {
 					reject(err);
 				}
 			});
 			child.once("exit", function(code) {
-				(code === 0 ? output.info : output.warn).call(output, "The wiki process ended (exit code " + code + ")");
+				logFromChild(code === 0 ? "info" : "warn", "The wiki process ended (exit code " + code + ")");
 				if(!connected) {
 					reject(new Error("the wiki process ended with exit code " + code + " before it connected"));
 				}
@@ -528,12 +537,13 @@ function activate(context) {
 				return stop().then(start);
 			}
 		}),
-		{ dispose: function() { clearTimeout(reconnectTimer); stop(); } }
+		{ dispose: function() { deactivated = true; clearTimeout(reconnectTimer); stop(); } }
 	);
 	start();
 }
 
 function deactivate() {
+	deactivated = true;
 	return stop();
 }
 
