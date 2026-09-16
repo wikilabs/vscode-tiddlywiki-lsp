@@ -1,39 +1,87 @@
 # TiddlyWiki LSP (VS Code)
 
-Connects VS Code to a running TiddlyWiki `--lsp` server, so `.tid` files get
-completion of titles and names, warnings on links that point at nothing, hovers
-on filters, operators, calls, widgets and pragma lines, go to definition, find
-references, the outline, Ctrl+T, highlighting, folding, signature help, inlay
-hints and rename.
+Gives `.tid` files completion of titles and names, warnings on links that point
+at nothing, hovers on filters, operators, calls, widgets and pragma lines, go to
+definition, find references, the outline, Ctrl+T, highlighting, folding,
+signature help, inlay hints and rename.
 
 Shadow tiddlers and tiddlers without a file of their own open read-only under
-the `tiddlywiki:` scheme. Saving a `.tid` updates the running wiki.
+the `tiddlywiki:` scheme.
 
-The extension is a thin client: every feature comes from the server.
-
-The answers come from the booted wiki, not from a parser reading the folder.
-That is the point: the server knows about shadows, plugin payloads and every
-title the wiki actually has.
+The extension is a thin client: every feature comes from a TiddlyWiki `--lsp`
+server, which answers from the booted wiki, not from a parser reading the
+folder. It knows about shadows, plugin payloads and every title the wiki
+actually has.
 
 ## Requirements
 
-The wiki needs the `wikilabs/tw-mcp` plugin **0.16.0 or later**, which adds the
-`--lsp` command. 0.16.0 is not released yet.
+The wiki needs the `wikilabs/tw-mcp` and `wikilabs/tw-mcp-core` plugins,
+**tw-mcp 0.17.0 or later**. 0.17.0 is not released yet.
 
-## Start the wiki
+## Which wiki
 
-```
-tiddlywiki ./mywiki --lsp port=6009
-```
+The editor starts the wiki's LSP server itself, as a child of the window, and
+stops it when the window closes. It looks for the wiki in this order:
 
-It composes with `--mcp` in one process, which is the normal way to run it:
+1. A workspace folder whose `tiddlywiki.info` has an `lsp` section:
 
-```
-tiddlywiki ./mywiki --mcp rw listen sse port=8888 --lsp port=6009
-```
+   ```json
+   "lsp": {
+   	"autostart": true,
+   	"label": "lsp-tw-mcp-server",
+   	"command": "node ../scripts/tw.js --core dev"
+   }
+   ```
 
-Socket, not `stdio`: `--mcp` already owns stdin, and the two protocols frame
-their messages differently.
+   `command` boots the wiki; the folder and `--lsp pipe=<name>` are appended.
+   Without it, `tiddlywiki` is used. When several folders qualify, the one that
+   includes another wins, so a `-server` edition is chosen over the edition it
+   includes.
+
+2. The `tiddlywiki.lsp.wiki` setting, for a wiki whose `tiddlywiki.info` is not
+   yours to change, for example in a `.code-workspace` file:
+
+   ```json
+   "settings": {
+   	"tiddlywiki.lsp.wiki": "${workspaceFolder}/editions/tw5.com-server",
+   	"tiddlywiki.lsp.command": "tiddlywiki +plugins/wikilabs/tw-mcp-core +plugins/wikilabs/tw-mcp",
+   	"tiddlywiki.lsp.label": "lsp-tw5.com-server"
+   }
+   ```
+
+3. A wiki already running with `--lsp`, found through the `.tw-mcp/lsp` file it
+   writes, or the `tiddlywiki.lsp.port` setting:
+
+   ```
+   tiddlywiki ./mywiki --mcp rw listen sse port=8888 --lsp
+   ```
+
+The first two run a command from the workspace, so they only happen in a
+trusted workspace.
+
+## A wiki of its own
+
+The LSP server the editor starts holds its own copy of the wiki, so a running
+MCP server can stop and start without taking the editor features down. The two
+keep in step:
+
+- Tiddler files the MCP server writes, for MCP tools and browser edits, are read
+  in as they change on disk.
+- A `.tid` saved in the editor is reloaded into the running MCP server too, so
+  the browser and MCP tools see it.
+- Hovers link shadow tiddlers to the MCP server's browser port.
+
+Each side logs the other by label: the `TiddlyWiki LSP` output shows
+`MCP server found: PID n @sse-primary, browser on port 8888`, and the MCP
+server's console and `get_wiki_info` list the LSP server with its label.
+
+## Status bar
+
+The status bar names the LSP server this window uses, for example
+`lsp-tw5.com-server`, and the MCP server it is linked to, as in
+`lsp-tw-mcp-server ⇄ sse-primary`. A spinner means the wiki is still booting, a
+warning that it is not running. The tooltip gives the wiki folder, where it was
+configured and the MCP server's browser port; a click opens the log.
 
 ## Language ids
 
@@ -54,18 +102,24 @@ Then either:
 - open this folder in VS Code and press <kbd>F5</kbd> for an Extension Development Host, or
 - copy the folder (including `node_modules`) into `%USERPROFILE%\.vscode\extensions\` and reload the window.
 
-After updating an installed copy, reload the window too, so the `tiddlywiki:`
-scheme is registered again.
+After updating an installed copy, reload the window. When `package.json`
+changed, restart VS Code instead: a reload keeps the old settings and
+activation events.
 
 ## Settings
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `tiddlywikiLsp.host` | `127.0.0.1` | Host the server listens on |
-| `tiddlywikiLsp.port` | `6009` | Port given to `--lsp port=<n>` |
+| `tiddlywiki.lsp.wiki` | | Wiki folder to start when no `tiddlywiki.info` has an `lsp` section: absolute, `${workspaceFolder}/...`, `${workspaceFolder:<name>}/...`, or relative to the first workspace folder |
+| `tiddlywiki.lsp.command` | `tiddlywiki` | Command that boots `tiddlywiki.lsp.wiki` |
+| `tiddlywiki.lsp.label` | `lsp-<wiki folder name>` | Label of that LSP server in both logs |
+| `tiddlywiki.lsp.host` | `127.0.0.1` | Host of a wiki already running with `--lsp` |
+| `tiddlywiki.lsp.port` | `6009` | Port of a wiki already running with `--lsp`; set, it wins over everything above |
 
-`TiddlyWiki LSP: Reconnect to the wiki` in the command palette re-dials after
-restarting the wiki. The output channel of the same name carries the protocol log.
+`TiddlyWiki LSP: Reconnect to the wiki` (`tiddlywiki.lsp.reconnect`) in the
+command palette starts or dials the wiki again. `TiddlyWiki LSP: Show the log`
+(`tiddlywiki.lsp.showOutput`) opens the `TiddlyWiki LSP` output channel, which
+carries the wiki's own log and the protocol log.
 
 ## Licence
 

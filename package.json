@@ -21,7 +21,7 @@
 	"activationEvents": [
 		"onLanguage:tid",
 		"onLanguage:tiddlywiki5",
-		"workspaceContains:tiddlywiki.info"
+		"workspaceContains:**/tiddlywiki.info"
 	],
 	"capabilities": {
 		"untrustedWorkspaces": {
@@ -60,22 +60,43 @@
 		"configuration": {
 			"title": "TiddlyWiki LSP",
 			"properties": {
-				"tiddlywikiLsp.host": {
+				"tiddlywiki.lsp.host": {
 					"type": "string",
 					"default": "127.0.0.1",
 					"description": "Host the TiddlyWiki --lsp server listens on."
 				},
-				"tiddlywikiLsp.port": {
+				"tiddlywiki.lsp.port": {
 					"type": "number",
 					"default": 6009,
 					"description": "Port of the wiki's --lsp server. Leave unset to read it from the .tw-mcp/lsp file the running wiki writes in its folder."
+				},
+				"tiddlywiki.lsp.wiki": {
+					"type": "string",
+					"default": "",
+					"restricted": true,
+					"description": "Wiki folder the editor starts an LSP server for when no workspace folder's tiddlywiki.info has an lsp section. Absolute, `${workspaceFolder}/editions/tw5.com-server`, `${workspaceFolder:<name>}/...` in a multi-root workspace, or relative to the first workspace folder."
+				},
+				"tiddlywiki.lsp.command": {
+					"type": "string",
+					"default": "tiddlywiki",
+					"restricted": true,
+					"description": "Command that boots tiddlywiki.lsp.wiki. The wiki folder and --lsp pipe=<name> are appended, e.g. `tiddlywiki +plugins/wikilabs/tw-mcp-core +plugins/wikilabs/tw-mcp`."
+				},
+				"tiddlywiki.lsp.label": {
+					"type": "string",
+					"default": "",
+					"description": "Label of the LSP server started for tiddlywiki.lsp.wiki, shown in its log and the MCP server's. Empty means lsp-<wiki folder name>, e.g. lsp-tw5.com-server."
 				}
 			}
 		},
 		"commands": [
 			{
-				"command": "tiddlywikiLsp.reconnect",
+				"command": "tiddlywiki.lsp.reconnect",
 				"title": "TiddlyWiki LSP: Reconnect to the wiki"
+			},
+			{
+				"command": "tiddlywiki.lsp.showOutput",
+				"title": "TiddlyWiki LSP: Show the log"
 			}
 		]
 	},

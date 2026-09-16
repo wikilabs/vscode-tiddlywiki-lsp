@@ -5,7 +5,7 @@ const fs = require("fs");
 const net = require("net");
 const path = require("path");
 const vscode = require("vscode");
-const { LanguageClient, createClientPipeTransport, generateRandomPipeName } = require("vscode-languageclient/node");
+const { LanguageClient, State, createClientPipeTransport, generateRandomPipeName } = require("vscode-languageclient/node");
 
 // Written by the wiki's --lsp in its folder, naming the port it listens on.
 const DISCOVERY = path.join(".tw-mcp", "lsp");
@@ -22,6 +22,12 @@ let reconnectTimer = null;
 let output = null;
 // The pipe to the wiki this window started, closed when a start fails so the process ends.
 let launched = null;
+let statusItem = null;
+// The MCP server the wiki's LSP process says it is linked to, or null.
+let mcpServer = null;
+
+const STATUS_ICONS = { none: "$(circle-slash)", starting: "$(sync~spin)", running: "$(book)", stopped: "$(warning)" };
+const STATUS_WORDS = { none: "no wiki", starting: "starting", running: "running", stopped: "not running" };
 
 // A wiki started elsewhere with --lsp is reached over its socket.
 function connect(host, port) {
@@ -65,7 +71,7 @@ function launch(wiki) {
 	return async function() {
 		const pipeName = generateRandomPipeName(),
 			transport = await createClientPipeTransport(pipeName),
-			commandLine = wiki.command + " " + quoteArg(wiki.path) + " --lsp " + quoteArg("pipe=" + pipeName);
+			commandLine = wiki.command + " " + quoteArg(wiki.path) + " --lsp " + quoteArg("pipe=" + pipeName) + (wiki.label ? " " + quoteArg("label=" + wiki.label) : "");
 		output.info("Starting " + wiki.path + (wiki.label ? " @" + wiki.label : "") + ": " + commandLine);
 		const child = childProcess.spawn(commandLine, { cwd: wiki.path, shell: true, windowsHide: true });
 		logLines(child.stdout);
@@ -121,7 +127,7 @@ function readAutostart(folder) {
 	return {
 		path: wikiPath,
 		command: info.lsp.command || DEFAULT_COMMAND,
-		label: info.lsp.label || null,
+		label: info.lsp.label || defaultLabel(wikiPath),
 		includes: (info.includeWikis || []).map(function(entry) {
 			return path.resolve(wikiPath, typeof entry === "string" ? entry : entry.path);
 		})
@@ -134,6 +140,37 @@ function autostartWiki() {
 	return wikis.find(function(wiki) {
 		return wikis.some(function(other) { return wiki.includes.includes(other.path); });
 	}) || wikis[0] || null;
+}
+
+// For a wiki whose tiddlywiki.info is not yours to change, the workspace settings name it instead.
+function settingsWiki(config) {
+	const setting = config.get("wiki");
+	if(!setting) {
+		return null;
+	}
+	const folders = vscode.workspace.workspaceFolders || [],
+		firstFolder = folders[0] ? folders[0].uri.fsPath : null;
+	// ${workspaceFolder} as in tasks.json, ${workspaceFolder:<name>} for a folder of a multi-root workspace.
+	const wiki = setting.replace(/\$\{workspaceFolder(?::([^}]+))?\}/g, function(match, name) {
+		const folder = name ? folders.find(function(candidate) { return candidate.name === name; }) : folders[0];
+		return folder ? folder.uri.fsPath : match;
+	});
+	if(wiki.includes("${") || (!firstFolder && !path.isAbsolute(wiki))) {
+		output.warn("Cannot resolve tiddlywiki.lsp.wiki: " + setting);
+		return null;
+	}
+	const wikiPath = path.resolve(firstFolder || "", wiki);
+	return {
+		path: wikiPath,
+		command: config.get("command") || DEFAULT_COMMAND,
+		label: config.get("label") || defaultLabel(wikiPath),
+		includes: []
+	};
+}
+
+// The server names itself the same way when no label is given.
+function defaultLabel(wikiPath) {
+	return "lsp-" + path.basename(wikiPath);
 }
 
 function isAlive(pid) {
@@ -209,16 +246,20 @@ async function findDiscovery() {
 }
 
 async function resolveTarget() {
-	const config = vscode.workspace.getConfiguration("tiddlywikiLsp"),
+	const config = vscode.workspace.getConfiguration("tiddlywiki.lsp"),
 		host = config.get("host"),
 		port = configuredPort(config);
 	if(port !== undefined) {
 		return { host: host, port: port, source: "settings", file: null };
 	}
 	// The command comes from a file in the workspace, so only a trusted workspace may run it.
-	const wiki = vscode.workspace.isTrusted ? autostartWiki() : null;
-	if(wiki) {
-		return { wiki: wiki, source: path.join(wiki.path, WIKI_INFO), file: null };
+	const infoWiki = vscode.workspace.isTrusted ? autostartWiki() : null;
+	if(infoWiki) {
+		return { wiki: infoWiki, source: path.join(infoWiki.path, WIKI_INFO), file: null };
+	}
+	const configuredWiki = vscode.workspace.isTrusted ? settingsWiki(config) : null;
+	if(configuredWiki) {
+		return { wiki: configuredWiki, source: "settings", file: null };
 	}
 	const found = await findDiscovery();
 	if(found) {
@@ -230,12 +271,12 @@ async function resolveTarget() {
 			file: found.file
 		};
 	}
-	return { host: host, port: config.get("port"), source: "default port", file: null };
+	return null;
 }
 
 function buildClient(chosen) {
 	return new LanguageClient(
-		"tiddlywikiLsp",
+		"tiddlywiki.lsp",
 		"TiddlyWiki LSP",
 		chosen.wiki ? launch(chosen.wiki) : function() { return connect(chosen.host, chosen.port); },
 		{
@@ -253,12 +294,58 @@ function buildClient(chosen) {
 	);
 }
 
-// A wiki that is not running is the ordinary case, not a crash, so it gets a
-// message naming the flag to start it with instead of an error popup.
+// The footer names the LSP server this window uses and, once linked, its MCP server.
+function showStatus(state, problem) {
+	const label = !target ? null : target.wiki ? target.wiki.label : (target.label || target.host + ":" + target.port),
+		linked = state === "running" && mcpServer,
+		tooltip = new vscode.MarkdownString();
+	statusItem.text = STATUS_ICONS[state] + " " + (label || "TiddlyWiki LSP") +
+		(linked ? " $(arrow-swap) " + (mcpServer.label || "MCP PID " + mcpServer.pid) : "");
+	tooltip.appendMarkdown("**TiddlyWiki LSP**: ");
+	tooltip.appendText(STATUS_WORDS[state] + (label ? " @" + label : ""));
+	if(target) {
+		tooltip.appendMarkdown("\n\n");
+		tooltip.appendText(target.wiki ? "Wiki " + target.wiki.path + " (from " + target.source + ")" : "Connected to " + target.host + ":" + target.port + " (from " + target.source + ")");
+	}
+	if(state === "running") {
+		tooltip.appendMarkdown("\n\n");
+		tooltip.appendText(mcpServer ? "MCP server PID " + mcpServer.pid + (mcpServer.label ? " @" + mcpServer.label : "") + (mcpServer.browserPort ? ", browser on port " + mcpServer.browserPort : ", no browser") : "No MCP server linked");
+	}
+	if(problem) {
+		tooltip.appendMarkdown("\n\n");
+		tooltip.appendText(problem);
+	}
+	tooltip.appendMarkdown("\n\n_Click to show the log_");
+	statusItem.tooltip = tooltip;
+	statusItem.backgroundColor = state === "stopped" ? new vscode.ThemeColor("statusBarItem.warningBackground") : undefined;
+	statusItem.show();
+}
+
+// A workspace without a wiki is the ordinary case, not a crash: it gets a log
+// line saying how to name one, and a wiki started later with --lsp is followed.
 async function start() {
 	const chosen = await resolveTarget();
 	target = chosen;
+	mcpServer = null;
+	if(!chosen) {
+		output.info("No wiki to start or connect to. Add an lsp section to the wiki's tiddlywiki.info, set tiddlywiki.lsp.wiki, or start the wiki with --lsp.");
+		showStatus("none");
+		return;
+	}
 	client = buildClient(chosen);
+	const started = client;
+	started.onDidChangeState(function(event) {
+		if(client === started) {
+			showStatus(event.newState === State.Running ? "running" : event.newState === State.Starting ? "starting" : "stopped");
+		}
+	});
+	started.onNotification("tiddlywiki/mcpServer", function(params) {
+		mcpServer = params.server;
+		if(client === started && started.isRunning()) {
+			showStatus("running");
+		}
+	});
+	showStatus("starting");
 	if(!chosen.wiki) {
 		output.info("Connecting to " + chosen.host + ":" + chosen.port + (chosen.label ? " @" + chosen.label : "") + " (from " + chosen.source + ")");
 	}
@@ -269,6 +356,7 @@ async function start() {
 			launched = null;
 		}
 		output.error(err.message);
+		showStatus("stopped", err.message);
 		vscode.window.showWarningMessage(chosen.wiki ?
 			"TiddlyWiki LSP: could not start the wiki in " + chosen.wiki.path + " (" + err.message + "). The TiddlyWiki LSP output shows its log." :
 			"TiddlyWiki LSP: nothing listening on " + chosen.host + ":" + chosen.port +
@@ -290,7 +378,7 @@ function stop() {
 // wiki this window uses, or when this window has none. A wiki this window
 // started itself is not replaced by one running elsewhere.
 function discoveryChanged(uri) {
-	const config = vscode.workspace.getConfiguration("tiddlywikiLsp");
+	const config = vscode.workspace.getConfiguration("tiddlywiki.lsp");
 	if(configuredPort(config) !== undefined || (target && target.wiki)) {
 		return;
 	}
@@ -324,11 +412,18 @@ const views = {
 function activate(context) {
 	// A log channel: the language client writes to it with error() and info().
 	output = vscode.window.createOutputChannel("TiddlyWiki LSP", { log: true });
+	statusItem = vscode.window.createStatusBarItem("tiddlywiki.lsp.status", vscode.StatusBarAlignment.Right, 100);
+	statusItem.name = "TiddlyWiki LSP";
+	statusItem.command = "tiddlywiki.lsp.showOutput";
 	const watcher = vscode.workspace.createFileSystemWatcher(DISCOVERY_GLOB, false, false, true);
 	context.subscriptions.push(
 		output,
+		statusItem,
+		vscode.commands.registerCommand("tiddlywiki.lsp.showOutput", function() {
+			output.show(true);
+		}),
 		vscode.workspace.registerTextDocumentContentProvider("tiddlywiki", views),
-		vscode.commands.registerCommand("tiddlywikiLsp.reconnect", function() {
+		vscode.commands.registerCommand("tiddlywiki.lsp.reconnect", function() {
 			return stop().then(start);
 		}),
 		watcher,
@@ -336,6 +431,11 @@ function activate(context) {
 		watcher.onDidChange(discoveryChanged),
 		vscode.workspace.onDidGrantWorkspaceTrust(function() {
 			return stop().then(start);
+		}),
+		vscode.workspace.onDidChangeConfiguration(function(event) {
+			if(event.affectsConfiguration("tiddlywiki.lsp")) {
+				return stop().then(start);
+			}
 		}),
 		{ dispose: function() { clearTimeout(reconnectTimer); stop(); } }
 	);
