@@ -83,6 +83,14 @@ The status bar names the LSP server this window uses, for example
 warning that it is not running. The tooltip gives the wiki folder, where it was
 configured and the MCP server's browser port; a click opens the log.
 
+## Preview in TiddlyWiki
+
+While the linked MCP server serves a browser, right-click a `.tid` tab and pick
+`TiddlyWiki LSP: Preview in TiddlyWiki`. The running wiki opens in a preview
+panel beside the editor, on that tiddler, taken from the file's `title` field.
+Previewing another tiddler reuses the panel without reloading the wiki. It shows
+the saved text, and a save shows up there without a refresh.
+
 ## Language ids
 
 Binds to `tid` (`.tid`, `.meta`) and `tiddlywiki5` (`.tw`, `.tw5`), the ids the

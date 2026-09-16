@@ -1,6 +1,7 @@
 "use strict";
 
 const childProcess = require("child_process");
+const crypto = require("crypto");
 const fs = require("fs");
 const net = require("net");
 const path = require("path");
@@ -25,6 +26,8 @@ let launched = null;
 let statusItem = null;
 // The MCP server the wiki's LSP process says it is linked to, or null.
 let mcpServer = null;
+let previewPanel = null;
+let previewPort = null;
 
 const STATUS_ICONS = { none: "$(circle-slash)", starting: "$(sync~spin)", running: "$(book)", stopped: "$(warning)" };
 const STATUS_WORDS = { none: "no wiki", starting: "starting", running: "running", stopped: "not running" };
@@ -326,7 +329,7 @@ function showStatus(state, problem) {
 async function start() {
 	const chosen = await resolveTarget();
 	target = chosen;
-	mcpServer = null;
+	setMcpServer(null);
 	if(!chosen) {
 		output.info("No wiki to start or connect to. Add an lsp section to the wiki's tiddlywiki.info, set tiddlywiki.lsp.wiki, or start the wiki with --lsp.");
 		showStatus("none");
@@ -340,8 +343,11 @@ async function start() {
 		}
 	});
 	started.onNotification("tiddlywiki/mcpServer", function(params) {
-		mcpServer = params.server;
-		if(client === started && started.isRunning()) {
+		if(client !== started) {
+			return;
+		}
+		setMcpServer(params.server);
+		if(started.isRunning()) {
 			showStatus("running");
 		}
 	});
@@ -366,12 +372,96 @@ async function start() {
 }
 
 function stop() {
+	setMcpServer(null);
 	if(!client) {
 		return Promise.resolve();
 	}
 	const running = client;
 	client = null;
 	return running.stop();
+}
+
+// The preview menu shows only while a linked MCP server serves a browser.
+function setMcpServer(server) {
+	mcpServer = server;
+	vscode.commands.executeCommand("setContext", "tiddlywiki.lsp.browser", !!(server && server.browserPort));
+}
+
+// A .tid file names its tiddler in the title field of its header, which ends at the first blank line.
+function titleOf(text) {
+	for(const line of text.split(/\r?\n/)) {
+		if(!line.trim()) {
+			return null;
+		}
+		const match = /^title:\s*(.*)$/.exec(line);
+		if(match) {
+			return match[1].trim() || null;
+		}
+	}
+	return null;
+}
+
+// Opens the tiddler of a .tid file in the running wiki, beside the editor.
+async function previewInWiki(uri) {
+	const target = uri || (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri);
+	if(!target) {
+		return;
+	}
+	const port = mcpServer && mcpServer.browserPort;
+	if(!port) {
+		vscode.window.showWarningMessage("TiddlyWiki LSP: no MCP server with a browser is linked to this wiki. Start the wiki server, for example with npm start.");
+		return;
+	}
+	const document = await vscode.workspace.openTextDocument(target),
+		title = titleOf(document.getText());
+	if(!title) {
+		vscode.window.showWarningMessage("TiddlyWiki LSP: " + path.basename(target.fsPath) + " has no title field.");
+		return;
+	}
+	const address = "http://127.0.0.1:" + port + "/#" + encodeURIComponent(title);
+	output.info("Preview " + title + " at " + address);
+	if(!previewPanel) {
+		previewPanel = vscode.window.createWebviewPanel("tiddlywiki.lsp.preview", "Preview", { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: true, retainContextWhenHidden: true });
+		previewPanel.onDidDispose(function() {
+			previewPanel = null;
+			previewPort = null;
+		});
+	}
+	previewPanel.title = "Preview " + title;
+	// Another tiddler of the same wiki only moves the fragment, so the wiki does not boot again.
+	if(previewPort === port) {
+		previewPanel.webview.postMessage({ address: address });
+		previewPanel.reveal(previewPanel.viewColumn, true);
+	} else {
+		previewPort = port;
+		previewPanel.webview.html = previewHtml(address, port);
+	}
+}
+
+// The running wiki in a frame that fills the panel; the page script moves the frame when asked.
+function previewHtml(address, port) {
+	const nonce = crypto.randomBytes(16).toString("base64");
+	return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src http://127.0.0.1:${port}; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
+<style nonce="${nonce}">
+	html, body, iframe { margin: 0; padding: 0; border: 0; width: 100%; height: 100%; overflow: hidden; }
+</style>
+</head>
+<body>
+<iframe id="wiki" src="${address}"></iframe>
+<script nonce="${nonce}">
+	const frame = document.getElementById("wiki");
+	window.addEventListener("message", (event) => {
+		if(event.data && event.data.address) {
+			frame.src = event.data.address;
+		}
+	});
+</script>
+</body>
+</html>`;
 }
 
 // A wiki (re)started with --lsp rewrites its file: follow it when it is the
@@ -422,6 +512,7 @@ function activate(context) {
 		vscode.commands.registerCommand("tiddlywiki.lsp.showOutput", function() {
 			output.show(true);
 		}),
+		vscode.commands.registerCommand("tiddlywiki.lsp.preview", previewInWiki),
 		vscode.workspace.registerTextDocumentContentProvider("tiddlywiki", views),
 		vscode.commands.registerCommand("tiddlywiki.lsp.reconnect", function() {
 			return stop().then(start);

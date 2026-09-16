@@ -97,8 +97,27 @@
 			{
 				"command": "tiddlywiki.lsp.showOutput",
 				"title": "TiddlyWiki LSP: Show the log"
+			},
+			{
+				"command": "tiddlywiki.lsp.preview",
+				"title": "TiddlyWiki LSP: Preview in TiddlyWiki"
 			}
-		]
+		],
+		"menus": {
+			"editor/title/context": [
+				{
+					"command": "tiddlywiki.lsp.preview",
+					"when": "resourceExtname == .tid && tiddlywiki.lsp.browser",
+					"group": "tiddlywiki"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "tiddlywiki.lsp.preview",
+					"when": "resourceExtname == .tid && tiddlywiki.lsp.browser"
+				}
+			]
+		}
 	},
 	"dependencies": {
 		"vscode-languageclient": "^10.1.1"
