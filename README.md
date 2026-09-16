@@ -28,7 +28,7 @@ stops it when the window closes. It looks for the wiki in this order:
    ```json
    "lsp": {
    	"autostart": true,
-   	"label": "lsp-tw-mcp-server",
+   	"label": "lsp-mcp-server",
    	"command": "node ../scripts/tw.js --core dev"
    }
    ```
@@ -79,7 +79,7 @@ server's console and `get_wiki_info` list the LSP server with its label.
 
 The status bar names the LSP server this window uses, for example
 `lsp-tw5.com-server`, and the MCP server it is linked to, as in
-`lsp-tw-mcp-server ⇄ sse-primary`. A spinner means the wiki is still booting, a
+`lsp-mcp-server ⇄ sse-primary`. A spinner means the wiki is still booting, a
 warning that it is not running. The tooltip gives the wiki folder, where it was
 configured and the MCP server's browser port; a click opens the log.
 
