@@ -111,6 +111,16 @@ tiddler the wiki does not have keeps only its warning squiggle. It covers what
 tw5-syntax underlines: `[[links]]`, `[ext[...]]`, external URLs, `$:/` system
 links and CamelCase links in the body, not in code, comments or tags.
 
+## Semantic tokens
+
+The server tells what a name means where it is written, which tw5-syntax cannot:
+a parameter from a global, a core macro from your own, a filter operator from
+the field test a misspelt one becomes. By default core names are italic and
+definitions bold; each kind of name can be coloured on its own with the
+`tiddlywiki.lsp.semanticColors.*` settings. The extension brings colours for
+light themes and for themes whose name contains "Dark";
+`editor.semanticTokenColorCustomizations` replaces them.
+
 ## Language ids
 
 Binds to `tid` (`.tid`, `.meta`) and `tiddlywiki5` (`.tw`, `.tw5`), the ids the
@@ -150,6 +160,9 @@ commands, settings and activation events, then ask for another reload.
 | `tiddlywiki.lsp.label` | `lsp-<wiki folder name>` | Label of that LSP server in both logs |
 | `tiddlywiki.lsp.host` | `127.0.0.1` | Host of a wiki already running with `--lsp` |
 | `tiddlywiki.lsp.port` | `6009` | Port of a wiki already running with `--lsp`; set, it wins over everything above |
+| `tiddlywiki.lsp.semanticColors.definitions`, `.calls`, `.parameters`, `.variables`, `.operators`, `.fieldTests` | off | Colour that kind of name |
+| `tiddlywiki.lsp.semanticItalic` | on | Core names in italic |
+| `tiddlywiki.lsp.semanticBold` | on | Definitions and their parameters in bold |
 
 `TiddlyWiki LSP: Reconnect to the wiki` (`tiddlywiki.lsp.reconnect`) in the
 command palette starts or dials the wiki again. `TiddlyWiki LSP: Show the log`
