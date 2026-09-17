@@ -31,6 +31,9 @@ let previewPanel = null;
 let previewPort = null;
 // Set when the window closes or reloads, before the log channel is disposed.
 let deactivated = false;
+// Restarts run one at a time, so a burst of settings changes cannot leave an earlier client running.
+let restarts = Promise.resolve();
+let restartQueued = false;
 
 const STATUS_ICONS = { none: "$(circle-slash)", starting: "$(sync~spin)", running: "$(book)", stopped: "$(warning)" };
 const STATUS_WORDS = { none: "no wiki", starting: "starting", running: "running", stopped: "not running" };
@@ -288,6 +291,7 @@ async function resolveTarget() {
 }
 
 function buildClient(chosen) {
+	const config = vscode.workspace.getConfiguration("tiddlywiki.lsp");
 	return new LanguageClient(
 		"tiddlywiki.lsp",
 		"TiddlyWiki LSP",
@@ -305,6 +309,14 @@ function buildClient(chosen) {
 				{ scheme: "git", language: "tid" },
 				{ scheme: "gitlens", language: "tid" }
 			],
+			// The server sends only what these ask to show; a change restarts the client.
+			initializationOptions: {
+				semanticTokens: {
+					colors: config.get("semanticColors"),
+					italic: config.get("semanticItalic"),
+					bold: config.get("semanticBold")
+				}
+			},
 			outputChannel: output
 		}
 	);
@@ -382,6 +394,20 @@ async function start() {
 			" (from " + chosen.source + "). Start the wiki with --lsp. (" + err.message + ")"
 		);
 	});
+}
+
+// A restart asked for while another still waits to run is that same restart.
+function restart() {
+	if(!restartQueued) {
+		restartQueued = true;
+		restarts = restarts.then(function() {
+			restartQueued = false;
+			return stop().then(start);
+		}).then(undefined, function(err) {
+			output.error("Restart failed: " + err.message);
+		});
+	}
+	return restarts;
 }
 
 function stop() {
@@ -514,7 +540,7 @@ function discoveryChanged(uri) {
 	}
 	clearTimeout(reconnectTimer);
 	reconnectTimer = setTimeout(function() {
-		stop().then(start);
+		restart();
 	}, RECONNECT_DELAY_MS);
 }
 
@@ -548,23 +574,23 @@ function activate(context) {
 		vscode.commands.registerCommand("tiddlywiki.lsp.listUndefinedCalls", listUndefinedCalls),
 		vscode.workspace.registerTextDocumentContentProvider("tiddlywiki", views),
 		vscode.commands.registerCommand("tiddlywiki.lsp.reconnect", function() {
-			return stop().then(start);
+			return restart();
 		}),
 		watcher,
 		watcher.onDidCreate(discoveryChanged),
 		watcher.onDidChange(discoveryChanged),
 		vscode.workspace.onDidGrantWorkspaceTrust(function() {
-			return stop().then(start);
+			return restart();
 		}),
 		vscode.workspace.onDidChangeConfiguration(function(event) {
 			if(event.affectsConfiguration("tiddlywiki.lsp")) {
-				return stop().then(start);
+				return restart();
 			}
 		}),
 		{ dispose: function() { deactivated = true; clearTimeout(reconnectTimer); stop(); } }
 	);
 	linkUnderline.activate(context);
-	start();
+	restart();
 }
 
 function deactivate() {

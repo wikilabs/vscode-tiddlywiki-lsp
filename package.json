@@ -86,6 +86,90 @@
 					"type": "string",
 					"default": "",
 					"description": "Label of the LSP server started for tiddlywiki.lsp.wiki, shown in its log and the MCP server's. Empty means lsp-<wiki folder name>, e.g. lsp-tw5.com-server."
+				},
+				"tiddlywiki.lsp.semanticColors.definitions": {
+					"type": "boolean",
+					"default": false,
+					"description": "Colour the name of a \\procedure, \\function, \\define or \\widget where it is defined."
+				},
+				"tiddlywiki.lsp.semanticColors.calls": {
+					"type": "boolean",
+					"default": false,
+					"description": "Colour a call of a definition or a JavaScript macro."
+				},
+				"tiddlywiki.lsp.semanticColors.parameters": {
+					"type": "boolean",
+					"default": false,
+					"description": "Colour a parameter where it is declared and where the definition uses it."
+				},
+				"tiddlywiki.lsp.semanticColors.variables": {
+					"type": "boolean",
+					"default": false,
+					"description": "Colour a variable a widget such as <$let> or <$list variable> binds, or TiddlyWiki sets itself, such as currentTiddler."
+				},
+				"tiddlywiki.lsp.semanticColors.operators": {
+					"type": "boolean",
+					"default": false,
+					"description": "Colour a filter operator such as tag or sort."
+				},
+				"tiddlywiki.lsp.semanticColors.fieldTests": {
+					"type": "boolean",
+					"default": false,
+					"description": "Colour a filter step that names no operator, such as [caption[x]], where TiddlyWiki tests a field of that name instead."
+				},
+				"tiddlywiki.lsp.semanticItalic": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show in italic what TiddlyWiki's core supplies: its macros, procedures, widgets, filter operators and variables such as currentTiddler."
+				},
+				"tiddlywiki.lsp.semanticBold": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show in bold where a name is defined: the name of a \\procedure, \\function, \\define or \\widget, and its parameters."
+				}
+			}
+		},
+		"semanticTokenTypes": [
+			{
+				"id": "tiddlywiki",
+				"description": "A name sent without its type, styled by its modifiers only."
+			}
+		],
+		"configurationDefaults": {
+			"editor.semanticTokenColorCustomizations": {
+				"rules": {
+					"*.defaultLibrary:tid": { "italic": true },
+					"*.defaultLibrary:tiddlywiki5": { "italic": true },
+					"*.declaration:tid": { "bold": true },
+					"*.declaration:tiddlywiki5": { "bold": true },
+					"function:tid": "#795E26",
+					"function:tiddlywiki5": "#795E26",
+					"macro:tid": "#795E26",
+					"macro:tiddlywiki5": "#795E26",
+					"method:tid": "#795E26",
+					"method:tiddlywiki5": "#795E26",
+					"parameter:tid": "#001080",
+					"parameter:tiddlywiki5": "#001080",
+					"variable:tid": "#001080",
+					"variable:tiddlywiki5": "#001080",
+					"property:tid": "#E50000",
+					"property:tiddlywiki5": "#E50000"
+				},
+				"[*Dark*]": {
+					"rules": {
+						"function:tid": "#DCDCAA",
+						"function:tiddlywiki5": "#DCDCAA",
+						"macro:tid": "#DCDCAA",
+						"macro:tiddlywiki5": "#DCDCAA",
+						"method:tid": "#DCDCAA",
+						"method:tiddlywiki5": "#DCDCAA",
+						"parameter:tid": "#9CDCFE",
+						"parameter:tiddlywiki5": "#9CDCFE",
+						"variable:tid": "#9CDCFE",
+						"variable:tiddlywiki5": "#9CDCFE",
+						"property:tid": "#F44747",
+						"property:tiddlywiki5": "#F44747"
+					}
 				}
 			}
 		},
