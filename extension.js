@@ -300,7 +300,10 @@ function buildClient(chosen) {
 				{ scheme: "file", language: "tid" },
 				{ scheme: "file", language: "tiddlywiki5" },
 				// The server's read-only views; a view of JavaScript is left alone.
-				{ scheme: "tiddlywiki", language: "tid" }
+				{ scheme: "tiddlywiki", language: "tid" },
+				// The older side of a diff, from VS Code's git or from GitLens: answered, never diagnosed.
+				{ scheme: "git", language: "tid" },
+				{ scheme: "gitlens", language: "tid" }
 			],
 			outputChannel: output
 		}

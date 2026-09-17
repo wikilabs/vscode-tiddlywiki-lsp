@@ -6,7 +6,8 @@ definition, find references, the outline, Ctrl+T, highlighting, folding,
 signature help, inlay hints and rename.
 
 Shadow tiddlers and tiddlers without a file of their own open read-only under
-the `tiddlywiki:` scheme.
+the `tiddlywiki:` scheme. The older side of a diff, from VS Code's git or from
+GitLens, gets hovers and definitions but no warnings, quick fixes or rename.
 
 The extension is a thin client: every feature comes from a TiddlyWiki `--lsp`
 server, which answers from the booted wiki, not from a parser reading the
@@ -16,7 +17,7 @@ actually has.
 ## Requirements
 
 The wiki needs the `wikilabs/tw-mcp` and `wikilabs/tw-mcp-core` plugins,
-**tw-mcp 0.18.0 or later**. 0.18.0 is not released yet.
+**tw-mcp 0.19.0 or later**. 0.19.0 is not released yet.
 
 ## Which wiki
 
